@@ -39,14 +39,59 @@ This component requires an I²C bus. See [I²C](/components/i2c) for configurati
 
 - **platform** (**Required**, string): The NVM platform to use. Currently only `fram_i2c`.
 - **id** (**Required**, ID): Manually specify the ID for this NVM device.
-- **address** (*Optional*, int): I²C address of the FRAM device. Defaults to `0x50`.
-- **model** (**Required**, string): The FRAM model. One of:
+- **address** (*Optional*, int): I²C address of the FRAM device. Defaults to `0x50` when using a known `model`. **Required** when using custom `size` (different FRAM devices have different default addresses).
+- **model** (*Optional*, string): The FRAM model. One of:
   - `MB85RC64` - 64 Kbit (8 KB)
   - `MB85RC128` - 128 Kbit (16 KB)
   - `MB85RC256` - 256 Kbit (32 KB)
   - `MB85RC512` - 512 Kbit (64 KB)
   - `MB85RC1M` - 1 Mbit (128 KB)
+- **size** (*Optional*, int or string): Custom FRAM size in bytes. Use this for non-standard FRAM devices. Either `model` or `size` must be specified. When using custom size, `address` is required. Can be specified as:
+  - Integer bytes: `16384`
+  - String with suffix: `16KB`
 - **partitions** (*Optional*, list): List of partitions to create. See [Partition Configuration](#partition-configuration).
+
+## Multiple NVM Devices
+
+This component supports multiple NVM devices (MULTI_CONF). You can configure multiple FRAM chips on different I²C addresses or buses:
+
+```yaml
+# Multiple FRAM devices on same I²C bus
+nvm:
+  - platform: fram_i2c
+    id: fram1
+    address: 0x50
+    model: MB85RC256
+    partitions:
+      - id: pref_store
+        type: preferences
+        size: 4KB
+
+  - platform: fram_i2c
+    id: fram2
+    address: 0x51
+    model: MB85RC64
+    partitions:
+      - id: cache
+        type: raw
+        size: 8KB
+```
+
+## Custom Size Example
+
+For non-standard FRAM devices, specify a custom size. Note that `address` is required when using custom size:
+
+```yaml
+nvm:
+  - platform: fram_i2c
+    id: my_fram
+    address: 0x50  # Required for custom size
+    size: 16KB  # Custom 16KB FRAM
+    partitions:
+      - id: pref_store
+        type: preferences
+        size: 4KB
+```
 
 ## Partition Configuration
 
