@@ -39,8 +39,8 @@ This component requires an I²C bus. See [I²C](/components/i2c) for configurati
 
 - **platform** (**Required**, string): The NVM platform to use. Currently only `fram_i2c`.
 - **id** (**Required**, ID): Manually specify the ID for this NVM device.
-- **address** (*Optional*, int): I²C address of the NVM device. Defaults to `0x50` when using a known `model`. **Required** when using custom `size` (different NVM devices have different default addresses). All supported models use address range `0x50`-`0x57` (configurable via A0-A2 pins).
-- **model** (*Optional*, string): The NVM model. One of:
+- **address** (*Optional*, int): I²C address of the FRAM device. Defaults to `0x50` when using a known `model`. **Required** when using custom `size` (different FRAM devices have different default addresses). All supported models use address range `0x50`-`0x57` (configurable via A0-A2 pins).
+- **model** (*Optional*, string): The FRAM model. One of:
   
   **Fujitsu MB85RC FRAM Series:**
   - `MB85RC64` - 64 Kbit (8 KB)
@@ -49,28 +49,15 @@ This component requires an I²C bus. See [I²C](/components/i2c) for configurati
   - `MB85RC512` - 512 Kbit (64 KB)
   - `MB85RC1M` - 1 Mbit (128 KB)
   - `MB85RC2M` - 2 Mbit (256 KB)
+  - `MB85RC4M` - 4 Mbit (512 KB)
   
   **Infineon/Cypress FRAM Series:**
   - `FM24CL64B` - 64 Kbit (8 KB)
   - `FM24CL256B` - 256 Kbit (32 KB)
   - `CY15B104QSN` - 4 Mbit (512 KB)
-  
-  **Microchip 24LC EEPROM Series:**
-  - `24LC64` - 64 Kbit (8 KB)
-  - `24LC256` - 256 Kbit (32 KB)
-  - `24LC512` - 512 Kbit (64 KB)
-  - `24LC1025` - 1 Mbit (128 KB, special addressing)
-  
-  **Atmel/Microchip AT24C EEPROM Series:**
-  - `AT24C64` - 64 Kbit (8 KB)
-  - `AT24C256` - 256 Kbit (32 KB)
-  - `AT24C512` - 512 Kbit (64 KB)
-  
-  **ST M24C EEPROM Series:**
-  - `M24C64` - 64 Kbit (8 KB)
-  - `M24C512` - 512 Kbit (64 KB)
+  - `CY15B108QSN` - 8 Mbit (1 MB)
 
-- **size** (*Optional*, int or string): Custom NVM size in bytes. Use this for non-standard NVM devices. Either `model` or `size` must be specified. When using custom size, `address` is required. Can be specified as:
+- **size** (*Optional*, int or string): Custom FRAM size in bytes. Use this for non-standard FRAM devices. Either `model` or `size` must be specified. When using custom size, `address` is required. Can be specified as:
   - Integer bytes: `16384`
   - String with suffix: `16KB`
 - **partitions** (*Optional*, list): List of partitions to create. See [Partition Configuration](#partition-configuration).
