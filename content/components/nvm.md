@@ -41,7 +41,7 @@ This component requires an I²C bus. See [I²C](/components/i2c) for configurati
 - **id** (**Required**, ID): Manually specify the ID for this NVM device.
 - **address** (*Optional*, int): I²C address of the FRAM device. Defaults to `0x50` when using a known `model`. **Required** when using custom `size` (different FRAM devices have different default addresses). All supported models use address range `0x50`-`0x57` (configurable via A0-A2 pins).
 - **model** (*Optional*, string): The FRAM model. One of:
-  
+
   **Fujitsu MB85RC FRAM Series:**
   - `MB85RC64` - 64 Kbit (8 KB)
   - `MB85RC128` - 128 Kbit (16 KB)
@@ -50,7 +50,7 @@ This component requires an I²C bus. See [I²C](/components/i2c) for configurati
   - `MB85RC1M` - 1 Mbit (128 KB)
   - `MB85RC2M` - 2 Mbit (256 KB)
   - `MB85RC4M` - 4 Mbit (512 KB)
-  
+
   **Infineon/Cypress FRAM Series:**
   - `FM24CL64B` - 64 Kbit (8 KB)
   - `FM24CL256B` - 256 Kbit (32 KB)
@@ -205,24 +205,6 @@ id(config)->get("counter", reinterpret_cast<uint8_t*>(&counter), sizeof(counter)
 
 When resizing partitions, understanding how offsets work is crucial for preserving existing data.
 
-### Partition Creation Logging
-
-At startup, partition configuration is logged at DEBUG level:
-
-```
-[D][nvm:112] Configured partition 'pref_store': type=preferences, offset=0x0000, size=4000 bytes
-[D][nvm:112] Configured partition 'sensor_cache': type=raw, offset=0x1000, size=8000 bytes
-```
-
-When a partition is initialized for the first time (empty FRAM or after factory reset), an INFO level message is logged:
-
-```
-[I][nvm:573] Created partition 'pref_store': type=preferences, size=4000 bytes
-[I][nvm:262] Created partition 'keys_data': type=key_value, size=2000 bytes
-```
-
-This helps identify when partitions are actually created vs. just configured from existing data.
-
 ### Removing Partitions
 
 When a partition is removed from the YAML configuration:
@@ -255,6 +237,7 @@ When a factory reset is triggered (via the `factory_reset` component or safe mod
 Raw and key_value partitions are independent storage areas that retain their data across factory resets.
 
 This design allows you to:
+
 - Preserve calibration data or sensor caches through a factory reset by storing them in `raw` partitions
 - Keep device configuration in `key_value` storage that survives factory resets
 - Use `preferences` for user-modifiable settings that should be cleared on factory reset
@@ -300,7 +283,7 @@ partitions:
     type: preferences
     size: 4kB
     # offset: 0 (implicit - first partition always at 0)
-  
+
   - id: sensor_cache
     type: raw
     size: 8kB
@@ -315,7 +298,7 @@ partitions:
   - id: pref_store
     type: preferences
     size: 6kB        # Increased
-  
+
   - id: sensor_cache
     type: raw
     size: 8kB
@@ -327,24 +310,19 @@ partitions:
 1. **Plan ahead**: Leave gaps between partitions for future growth
 2. **Use explicit offsets**: For all partitions after the first one
 3. **Place preferences first**: Since it's at offset 0, it can grow without affecting others (if they have explicit offsets)
-4. **Monitor usage**: The preferences partition logs pool usage at startup and warns when approaching capacity:
-
-```
-[D][nvm:470]: Pool usage: 149/4000 bytes (3.7%)
-[W][nvm:474]: Pool is 95% full! Consider increasing partition size
-```
+4. **Monitor usage**: The preferences partition logs pool usage at startup and warns when approaching capacity.
 
 #### Warning Thresholds
 
 The preferences and key_value partitions monitor usage and generate warnings at these thresholds:
 
 | Threshold | Default | Description |
-|-----------|---------|-------------|
+| --------- | ------- | ----------- |
 | L1        | 80%     | Warning logged - pool approaching capacity |
 | L2        | 90%     | Warning logged - pool nearly full |
 
 | Usage | Timing | Message | Repeat |
-|-------|--------|---------|--------|
+| ----- | ------ | ------- | ------ |
 | > 80% | Startup | "Pool/Partition is X% full. Consider increasing partition size soon" | Once per boot |
 | > 80% | Runtime | "Pool/Partition is X% full (Y/Z bytes). Consider increasing partition size" | Once per boot |
 | > 90% | Startup | "Pool/Partition is X% full! Consider increasing partition size" | Once per boot |
