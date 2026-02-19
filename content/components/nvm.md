@@ -207,11 +207,11 @@ When resizing partitions, understanding how offsets work is crucial for preservi
 
 ### Partition Creation Logging
 
-At startup, each partition creation is logged at INFO level:
+At startup, each partition configuration is logged at INFO level:
 
 ```
-[I][nvm:109] Created partition 'pref_store': type=preferences, offset=0x0000, size=4096 bytes
-[I][nvm:109] Created partition 'sensor_cache': type=raw, offset=0x1000, size=8192 bytes
+[I][nvm:107] Configured partition 'pref_store': type=preferences, offset=0x0000, size=4000 bytes
+[I][nvm:107] Configured partition 'sensor_cache': type=raw, offset=0x1000, size=8000 bytes
 ```
 
 This helps verify partition configuration and identify when new partitions are added.
