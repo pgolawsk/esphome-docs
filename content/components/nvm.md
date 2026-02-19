@@ -16,10 +16,10 @@ nvm:
     partitions:
       - id: pref_store
         type: preferences
-        size: 4KB
+        size: 4kB
       - id: sensor_cache
         type: raw
-        size: 8KB
+        size: 8kB
 ```
 
 ## Benefits of External NVM
@@ -59,7 +59,7 @@ This component requires an I²C bus. See [I²C](/components/i2c) for configurati
 
 - **size** (*Optional*, int or string): Custom FRAM size in bytes. Use this for non-standard FRAM devices. Either `model` or `size` must be specified. When using custom size, `address` is required. Can be specified as:
   - Integer bytes: `16384`
-  - String with suffix: `16KB`
+  - String with suffix: `16kB`
 - **partitions** (*Optional*, list): List of partitions to create. See [Partition Configuration](#partition-configuration).
 
 ## Multiple NVM Devices
@@ -76,7 +76,7 @@ nvm:
     partitions:
       - id: pref_store
         type: preferences
-        size: 4KB
+        size: 4kB
 
   - platform: fram_i2c
     id: fram2
@@ -85,7 +85,7 @@ nvm:
     partitions:
       - id: cache
         type: raw
-        size: 8KB
+        size: 8kB
 ```
 
 ## Custom Size Example
@@ -97,11 +97,11 @@ nvm:
   - platform: fram_i2c
     id: my_fram
     address: 0x50  # Required for custom size
-    size: 16KB  # Custom 16KB FRAM
+    size: 16kB  # Custom 16kB FRAM
     partitions:
       - id: pref_store
         type: preferences
-        size: 4KB
+        size: 4kB
 ```
 
 ## Partition Configuration
@@ -115,7 +115,7 @@ Partitions divide the NVM device into logical sections. Each partition has:
   - `key_value` - Key-value store
 - **size** (**Required**, int or string): Size of the partition. Can be specified as:
   - Integer bytes: `4096`
-  - String with suffix: `4KB`, `1MB`
+  - String with suffix: `4kB`, `1MB`
 - **offset** (*Optional*, int): Offset within NVM device. Auto-calculated if not specified.
 
 ### Preferences Partition
@@ -131,7 +131,7 @@ nvm:
     partitions:
       - id: pref_store
         type: preferences
-        size: 4KB
+        size: 4kB
 
 # Global variables stored in FRAM
 globals:
@@ -156,7 +156,7 @@ nvm:
     partitions:
       - id: sensor_cache
         type: raw
-        size: 8KB
+        size: 8kB
 ```
 
 Access in lambdas:
@@ -184,7 +184,7 @@ nvm:
     partitions:
       - id: config
         type: key_value
-        size: 2KB
+        size: 2kB
 ```
 
 Access in lambdas:
@@ -201,6 +201,148 @@ uint32_t counter = 0;
 id(config)->get("counter", reinterpret_cast<uint8_t*>(&counter), sizeof(counter));
 ```
 
+## Partition Resizing and Data Preservation
+
+When resizing partitions, understanding how offsets work is crucial for preserving existing data.
+
+### Partition Creation Logging
+
+At startup, each partition creation is logged at INFO level:
+
+```
+[I][nvm:109] Created partition 'pref_store': type=preferences, offset=0x0000, size=4096 bytes
+[I][nvm:109] Created partition 'sensor_cache': type=raw, offset=0x1000, size=8192 bytes
+```
+
+This helps verify partition configuration and identify when new partitions are added.
+
+### Removing Partitions
+
+When a partition is removed from the YAML configuration:
+
+- **Data remains on FRAM**: The FRAM retains all written data; it's not erased
+- **No automatic cleanup**: The storage space is not reclaimed or zeroed
+- **Offset implications**: If you add a new partition later at the same offset, it may read old data
+
+To explicitly clear a partition before removal, use a lambda in your config:
+
+```yaml
+# Before removing, clear the partition once
+on_boot:
+  - lambda: |-
+      id(my_partition)->clear();  // If clear() method exists
+```
+
+Or simply accept that the old data will remain until overwritten by a new partition.
+
+### Factory Reset Behavior
+
+When a factory reset is triggered (via the `factory_reset` component or safe mode):
+
+| Partition Type | Cleared by Factory Reset |
+|----------------|--------------------------|
+| `preferences` | ✅ Yes - pool is zeroed and reinitialized |
+| `raw` | ❌ No - data remains unchanged |
+| `key_value` | ❌ No - data remains unchanged |
+
+Raw and key_value partitions are independent storage areas that retain their data across factory resets.
+
+This design allows you to:
+- Preserve calibration data or sensor caches through a factory reset by storing them in `raw` partitions
+- Keep device configuration in `key_value` storage that survives factory resets
+- Use `preferences` for user-modifiable settings that should be cleared on factory reset
+
+### Automatic vs Explicit Offsets
+
+By default, partitions are placed automatically starting at offset 0, with each subsequent partition placed immediately
+after the previous one:
+
+```yaml
+# Auto-calculated offsets
+partitions:
+  - id: pref_store
+    type: preferences
+    size: 4kB    # offset: 0x0000 (auto)
+  - id: sensor_cache
+    type: raw
+    size: 8kB    # offset: 0x1000 (auto - starts right after pref_store)
+```
+
+### Data Preservation When Resizing
+
+The preferences partition has built-in logic to handle size changes:
+
+- **Increasing size**: Data is always preserved
+- **Decreasing size**: Data is preserved if it fits within the new size, otherwise the pool is cleared
+
+However, **other partitions are not automatically migrated** when offsets change:
+
+| Scenario | Preferences Data | Other Partitions |
+|----------|------------------|------------------|
+| Increase first partition | ✅ Preserved | ❌ Lost (offset shifts) |
+| Decrease first partition | ✅ Preserved | ❌ Lost (offset shifts) |
+| Any change with explicit offsets | ✅ Preserved | ✅ Preserved |
+
+### Best Practice: Use Explicit Offsets
+
+To safely resize partitions while preserving data in other partitions, use explicit offsets:
+
+```yaml
+partitions:
+  - id: pref_store
+    type: preferences
+    size: 4kB
+    # offset: 0 (implicit - first partition always at 0)
+  
+  - id: sensor_cache
+    type: raw
+    size: 8kB
+    offset: 0x2000   # Explicit offset - won't shift if pref_store changes
+```
+
+With explicit offsets, you can safely change `pref_store` size without affecting `sensor_cache`:
+
+```yaml
+# After resizing pref_store from 4kB to 6kB
+partitions:
+  - id: pref_store
+    type: preferences
+    size: 6kB        # Increased
+  
+  - id: sensor_cache
+    type: raw
+    size: 8kB
+    offset: 0x0000   # Changed offset - data preserved
+```
+
+### Resizing Recommendations
+
+1. **Plan ahead**: Leave gaps between partitions for future growth
+2. **Use explicit offsets**: For all partitions after the first one
+3. **Place preferences first**: Since it's at offset 0, it can grow without affecting others (if they have explicit offsets)
+4. **Monitor usage**: The preferences partition logs pool usage at startup and warns when approaching capacity:
+
+```
+[D][nvm:470]: Pool usage: 149/4000 bytes (3.7%)
+[W][nvm:474]: Pool is 95% full! Consider increasing partition size
+```
+
+#### Warning Thresholds
+
+The preferences partition monitors pool usage and generates warnings at these thresholds:
+
+| Usage | Timing | Message | Repeat |
+|-------|--------|---------|--------|
+| > 80% | Startup | "Pool is X% full. Consider increasing partition size soon" | Once per boot |
+| > 80% | Runtime | "Pool is X% full (Y/Z bytes). Consider increasing partition size" | Once per boot |
+| > 90% | Startup | "Pool is X% full! Consider increasing partition size" | Once per boot |
+
+The runtime warning is triggered when any preference is saved (e.g., global variable updated, calibration data stored)
+and pool usage exceeds 80%. It only fires once per boot session (tracked by `warned_80_percent_` flag) to avoid log spam.
+
+> **Note**: Pool usage monitoring is only available for `preferences` partitions. `raw` and `key_value` partitions do not
+> have automatic usage tracking.
+
 ## Complete Example
 
 ```yaml
@@ -216,10 +358,10 @@ nvm:
     partitions:
       - id: pref_store
         type: preferences
-        size: 4KB
+        size: 4kB
       - id: sensor_cache
         type: raw
-        size: 8KB
+        size: 8kB
 
 globals:
   - id: total_runtime
