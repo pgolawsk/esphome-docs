@@ -1,6 +1,7 @@
 ---
 title: NVM (Non-Volatile Memory)
 description: Store data in external Non-Volatile Memory like FRAM or EEPROM
+image: nvm_fram.jpg
 ---
 
 The `nvm` component provides a unified interface for Non-Volatile Memory devices like FRAM (Ferroelectric RAM) and EEPROM.
