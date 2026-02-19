@@ -338,6 +338,11 @@ partitions:
 
 The preferences and key_value partitions monitor usage and generate warnings at these thresholds:
 
+| Threshold | Default | Description |
+|-----------|---------|-------------|
+| L1        | 80%     | Warning logged - pool approaching capacity |
+| L2        | 90%     | Warning logged - pool nearly full |
+
 | Usage | Timing | Message | Repeat |
 |-------|--------|---------|--------|
 | > 80% | Startup | "Pool/Partition is X% full. Consider increasing partition size soon" | Once per boot |
@@ -345,7 +350,7 @@ The preferences and key_value partitions monitor usage and generate warnings at 
 | > 90% | Startup | "Pool/Partition is X% full! Consider increasing partition size" | Once per boot |
 
 The runtime warning is triggered when data is written (preferences saved or key_value set) and usage exceeds 80%.
-It only fires once per boot session (tracked by `warned_80_percent_` flag) to avoid log spam.
+It only fires once per boot session (tracked by internal flag) to avoid log spam.
 
 > **Note**: Usage monitoring is available for `preferences` and `key_value` partitions. `raw` partitions do not
 > have automatic usage tracking since they provide direct byte-level access without a storage format.
